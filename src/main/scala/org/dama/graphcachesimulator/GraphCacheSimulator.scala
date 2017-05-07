@@ -24,7 +24,7 @@ class CacheSet( val setSize : Int ) {
     if(lines.length > setSize) {
       lines = lines.dropRight(1)
     }
-    return prevNumLines != postNumLines
+    prevNumLines != postNumLines
   }
 }
 
@@ -102,42 +102,42 @@ object GraphCacheSimulator {
   var setAssociativity = 4
   var elementSize = 8
 
-  def main(args: Array[String]) {
+  def printUsageMessage(): Unit = {
+    println("--input-file <path> The path to the input graph file")
+    println("--cache-size <num> The size of the cache in bytes (default=32768) ")
+    println("--line-size <num> The size of the cache line in bytes (default=64)")
+    println("--set-associativity <num> The set associativity (default=4)")
+    println("--element-size <num> The size of each element (default=8)")
+  }
 
-    def printUsageMessage(): Unit = {
-      println("--input-file <path> The path to the input graph file")
-      println("--cache-size <num> The size of the cache in bytes (default=32768) ")
-      println("--line-size <num> The size of the cache line in bytes (default=64)")
-      println("--set-associativity <num> The set associativity (default=4)")
-      println("--element-size <num> The size of each element (default=8)")
-    }
-
-    def nextOption(args: List[String]): Unit = {
-      args match {
-        case "--input-file" :: value :: tail => {
-          inputFile = value
-          nextOption(tail)
-        }
-        case "--cache-size" :: value :: tail => {
-          cacheSizeB = value.toInt
-          nextOption(tail)
-        }
-        case "--line-size" :: value :: tail => {
-          cacheLineB = value.toInt
-          nextOption(tail)
-        }
-        case "--set-associativity" :: value :: tail => {
-          setAssociativity = value.toInt
-          nextOption(tail)
-        }
-        case "--element-size" :: value :: tail => {
-          elementSize = value.toInt
-          nextOption(tail)
-        }
-        case value :: tail => Unit
-        case Nil => Unit
+  def nextOption(args: List[String]): Unit = {
+    args match {
+      case "--input-file" :: value :: tail => {
+        inputFile = value
+        nextOption(tail)
       }
+      case "--cache-size" :: value :: tail => {
+        cacheSizeB = value.toInt
+        nextOption(tail)
+      }
+      case "--line-size" :: value :: tail => {
+        cacheLineB = value.toInt
+        nextOption(tail)
+      }
+      case "--set-associativity" :: value :: tail => {
+        setAssociativity = value.toInt
+        nextOption(tail)
+      }
+      case "--element-size" :: value :: tail => {
+        elementSize = value.toInt
+        nextOption(tail)
+      }
+      case value :: tail => Unit
+      case Nil => Unit
     }
+  }
+
+  def main(args: Array[String]) {
 
     nextOption(args.toList)
 
@@ -146,19 +146,14 @@ object GraphCacheSimulator {
       sys.exit()
     }
 
-
     println("Reading edge file")
     /** node pairs representing the edges of the graph (repeated in both directions */
     val nodePairs: List[(Long, Long)] = Source.fromFile(inputFile)
       .getLines()
       .map(l => l.split(" "))
-      .map(fields => (fields(0).toLong, fields(1).toLong))
-      .flatMap(edge => Seq((edge._1, edge._2), (edge._2, edge._1)))
-      .toList.
-      sortWith((a, b) => {
-        if (a._1 == b._1) a._2 < b._2
-        else a._1 < b._1
-      })
+      .map(fields => (fields(0).toLong, fields(1).toLong)).toList
+
+    val duplicatedNodePairs =  nodePairs.flatMap(edge => Seq((edge._1, edge._2), (edge._2, edge._1)))
 
     val cacheSimulator = new GraphCacheSimulator(cacheSizeB, cacheLineB, setAssociativity, elementSize)
     cacheSimulator.simulateGraph(nodePairs)
@@ -174,10 +169,11 @@ class GraphCacheSimulator(val cacheSizeB : Int = 32 * 1024,
 
     println("Building degrees vector")
     /** list of degrees of the nodes of the graph */
-    val degrees = nodePairs.groupBy(edge => edge._1)
-      .map(group => group._1 -> group._2.length.toLong)
-      .toList
+    val nodeDegrees = nodePairs.groupBy(edge => edge._1)
+      .map(group => group._1 -> group._2.length.toLong).toList
+    val sortedNodeDegrees = nodeDegrees
       .sortWith((a, b) => a._1 < a._2)
+    val degrees = sortedNodeDegrees
       .map(element => element._2)
 
     println("Building CSR graph representation")
