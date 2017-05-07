@@ -151,7 +151,7 @@ object GraphCacheSimulator {
     /** node pairs representing the edges of the graph (repeated in both directions */
     val nodePairs: List[(Long, Long)] = Source.fromFile(inputFile)
       .getLines()
-      .map(l => l.split("\t"))
+      .map(l => l.split(" "))
       .map(fields => (fields(0).toLong, fields(1).toLong))
       .flatMap(edge => Seq((edge._1, edge._2), (edge._2, edge._1)))
       .toList.
