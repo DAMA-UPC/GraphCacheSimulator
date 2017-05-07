@@ -154,13 +154,12 @@ object GraphCacheSimulator {
       .map(fields => (fields(0).toLong, fields(1).toLong)).toList
 
     val duplicatedNodePairs =  nodePairs.flatMap(edge => {
-      val edge1 = (edge._1, edge._2)
-      val edge2 = (edge._2, edge._1)
-      Seq(edge1,edge2)
-    })
+        val edge1 = (edge._1, edge._2)
+        val edge2 = (edge._2, edge._1)
+        Seq(edge1,edge2)})
 
     val cacheSimulator = new GraphCacheSimulator(cacheSizeB, cacheLineB, setAssociativity, elementSize)
-    cacheSimulator.simulateGraph(nodePairs)
+    cacheSimulator.simulateGraph(duplicatedNodePairs)
   }
 }
 
@@ -172,20 +171,23 @@ class GraphCacheSimulator(val cacheSizeB : Int = 32 * 1024,
   def simulateGraph( nodePairs : List[(Long,Long)]) = {
 
     println("Building degrees vector")
+    val sortedNodePairs = nodePairs.sortBy({ case (tail,head) => tail })
     /** list of degrees of the nodes of the graph */
-    val nodeDegrees = nodePairs.groupBy(edge => edge._1)
-      .map(group => group._1 -> group._2.length.toLong).toList
-    val sortedNodeDegrees = nodeDegrees
-      .sortWith((a, b) => a._1 < a._2)
-    val degrees = sortedNodeDegrees
-      .map(element => element._2)
+    val nodeDegrees = sortedNodePairs.groupBy( {case (tail,head) => tail} )
+                               .map( { case (node, neighbors) => node -> neighbors.length.toLong })
+                               .toList
+
+    val degrees = nodeDegrees
+      .sortBy( { case (node, degree) => node })
+      .map( { case (node, degree) => degree})
 
     println("Building CSR graph representation")
     /** CSR node array **/
     val nodes : Array[Long] = degrees.scanLeft(0L)((acc, element) => acc + element).dropRight(1).toArray
 
     /** CSR edge array **/
-    val edges : Array[Long]= nodePairs.map(pair => pair._2).toArray
+
+    val edges : Array[Long]= sortedNodePairs.map( {case (tail,head) => head }).toArray
 
     println("Number of nodes: "+nodes.length)
     println("Number of edges: "+edges.length/2)
