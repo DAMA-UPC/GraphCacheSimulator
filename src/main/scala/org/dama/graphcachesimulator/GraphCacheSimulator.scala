@@ -153,10 +153,10 @@ object GraphCacheSimulator {
       .map(l => l.split(" "))
       .map(fields => (fields(0).toLong, fields(1).toLong)).toList
 
-    val duplicatedNodePairs =  nodePairs.flatMap(edge => {
-        val edge1 = (edge._1, edge._2)
-        val edge2 = (edge._2, edge._1)
-        Seq(edge1,edge2)})
+    val duplicatedNodePairs =  nodePairs.flatMap( { case (tail,head) => {
+        val edge1 = (tail, head)
+        val edge2 = (head, tail)
+        Seq(edge1,edge2)}})
 
     val cacheSimulator = new GraphCacheSimulator(cacheSizeB, cacheLineB, setAssociativity, elementSize)
     cacheSimulator.simulateGraph(duplicatedNodePairs)
