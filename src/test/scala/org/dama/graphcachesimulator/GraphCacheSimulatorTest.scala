@@ -72,4 +72,20 @@ class GraphCacheSimulatorTest extends FlatSpec with Matchers  {
     cache.getSetId(cache.getIndex(cache.getTag(32768L))) should be (0)
 
   }
+
+  "In a Cache of size 8MB and default parameters, two consecutive scanes of 1Mega elements of size 8bytes" should " give 1Mega misses and 1Mega hits respectively" in {
+    val cache = new Cache(8*1024*1024)
+    for(x <- 0 until 1024*1024) {
+      if(x % 8 == 0) // compulsory miss
+        cache.readElement(x) should be (false)
+      else // exploiting spatial locality
+        cache.readElement(x) should be (true)
+    }
+
+    for(x <- 0 until (1024*1024)) {
+      cache.readElement(x) should be (true)
+    }
+
+    cache.printStats()
+  }
 }

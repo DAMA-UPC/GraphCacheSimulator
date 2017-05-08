@@ -49,15 +49,17 @@ class Cache( val cacheSizeB : Int = 32*1024,
   var min = Long.MaxValue
   var max = Long.MinValue
 
-  def readElement( element : Long ) = {
+  def readElement( element : Long ) : Boolean = {
     val tag = getTag(element)
     val index = getIndex(tag)
     val setId = getSetId(index)
-    if(!sets(setId).read(tag)) {
+    val hit = sets(setId).read(tag)
+    val miss = !hit
+    if(miss)
       statistics.put(tag,statistics.getOrElse(tag,0L)+1L)
-    }
     min = Math.min(element,min)
     max = Math.max(element,max)
+    hit
   }
 
   /**
@@ -88,8 +90,9 @@ class Cache( val cacheSizeB : Int = 32*1024,
     println(s"NumSets: $numSets")
     println(s"SetAssociatibity: $setAssociativity")
     val numAccesses = statistics.values.foldLeft(0L)(_+_)
-    println("Working set size in number of elements: "+(max - min))
-    println("Working set size in lines: "+Math.ceil((max - min)/elementsPerLine.toDouble).toInt)
+    println("Working set size in number of elements: "+((max - min)+1))
+    println("Working set size in lines: "+Math.ceil(((max - min)+1)/elementsPerLine.toDouble).toInt)
+    println("Num of different lines touched "+statistics.values.size)
     println(s"Num of Lines brought from memory: $numAccesses")
   }
 }
@@ -148,32 +151,32 @@ object GraphCacheSimulator {
 
     println("Reading edge file")
     /** node pairs representing the edges of the graph (repeated in both directions */
-    val nodePairs: List[(Long, Long)] = Source.fromFile(inputFile)
+    val edges : List[(Long, Long)] = Source.fromFile(inputFile)
       .getLines()
       .map(l => l.split(" "))
       .map(fields => (fields(0).toLong, fields(1).toLong)).toList
 
-    val duplicatedNodePairs =  nodePairs.flatMap( { case (tail,head) => {
+    val duplicatedEdges =  edges.flatMap( { case (tail,head) => {
         val edge1 = (tail, head)
         val edge2 = (head, tail)
         Seq(edge1,edge2)}})
 
     val cacheSimulator = new GraphCacheSimulator(cacheSizeB, cacheLineB, setAssociativity, elementSize)
-    cacheSimulator.simulateGraph(duplicatedNodePairs)
+    cacheSimulator.simulateGraph(duplicatedEdges)
   }
 }
 
-class GraphCacheSimulator(val cacheSizeB : Int = 32 * 1024,
-                          val cacheLineB : Int = 64,
-                          val setAssociativity : Int = 4,
-                          val elementSize : Int = 8 ) {
+class GraphCacheSimulator( val cacheSizeB : Int = 32 * 1024,
+                           val cacheLineB : Int = 64,
+                           val setAssociativity : Int = 4,
+                           val elementSize : Int = 8 ) {
 
-  def simulateGraph( nodePairs : List[(Long,Long)]) = {
+  def simulateGraph( edges : List[(Long,Long)]) = {
 
     println("Building degrees vector")
-    val sortedNodePairs = nodePairs.sortBy({ case (tail,head) => tail })
+    val sortedEdges = edges.sortBy({ case (tail,head) => tail })
     /** list of degrees of the nodes of the graph */
-    val nodeDegrees = sortedNodePairs.groupBy( {case (tail,head) => tail} )
+    val nodeDegrees = sortedEdges.groupBy( {case (tail,head) => tail} )
                                .map( { case (node, neighbors) => node -> neighbors.length.toLong })
                                .toList
 
@@ -183,29 +186,26 @@ class GraphCacheSimulator(val cacheSizeB : Int = 32 * 1024,
 
     println("Building CSR graph representation")
     /** CSR node array **/
-    val nodes : Array[Long] = degrees.scanLeft(0L)((acc, element) => acc + element).dropRight(1).toArray
+    val csrNodes : Array[Long] = degrees.scanLeft(0L)((acc, element) => acc + element).dropRight(1).toArray
 
     /** CSR edge array **/
+    val csrEdges : Array[Long]= sortedEdges.map( {case (tail,head) => head }).toArray
 
-    val edges : Array[Long]= sortedNodePairs.map( {case (tail,head) => head }).toArray
-
-    println("Number of nodes: "+nodes.length)
-    println("Number of edges: "+edges.length/2)
+    println("Number of nodes: "+csrNodes.length)
+    println("Number of edges: "+csrEdges.length/2)
 
     println("Creating Cache")
     val cache = new Cache(cacheSizeB, cacheLineB, setAssociativity,elementSize)
 
     println("Simulating accesses")
-    for( i <- 0 until (nodes.length)) {
-      val begin = nodes(i)
-      val end = if(i+1 < nodes.length) nodes(i+1)
-                else edges.length
+    for( i <- 0 until (csrNodes.length)) {
+      val begin = csrNodes(i)
+      val end = if(i+1 < csrNodes.length) csrNodes(i+1)
+                else csrEdges.length
       for( j <- begin until end) {
-        cache.readElement(edges(j.toInt))
+        cache.readElement(csrEdges(j.toInt))
       }
     }
     cache.printStats()
   }
 }
-
-
