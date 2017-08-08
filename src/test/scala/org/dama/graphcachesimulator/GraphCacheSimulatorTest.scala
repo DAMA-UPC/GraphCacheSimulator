@@ -1,18 +1,12 @@
 package org.dama.graphcachesimulator
 
+import org.dama.graphcachesimulator.types.{Cache, CacheSet}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Created by aprat on 7/05/17.
   */
 class GraphCacheSimulatorTest extends FlatSpec with Matchers  {
-
-  "" should "" in {
-
-    val nodePairs : List[(Long,Long)] = List((0L,1L),(1L,0L))
-    val cacheSimulator = new GraphCacheSimulator()
-    cacheSimulator.simulateGraph(nodePairs)
-  }
 
   "A Cache Set of size 4 with LRU replacement policy " should " always miss after sequential access to 5 elements " in {
 
@@ -40,9 +34,9 @@ class GraphCacheSimulatorTest extends FlatSpec with Matchers  {
     }
   }
 
-  "In a Cache with default parameters, tag of elements 0, 1024, 2048, 4096 and 32768" should " be 0, 128, 256 and 512, 4096 " in {
+  "In a Cache 32KB with default parameters, tag of elements 0, 1024, 2048, 4096 and 32768" should " be 0, 128, 256 and 512, 4096 " in {
 
-    val cache = new Cache()
+    val cache = new Cache(32*1024)
     cache.getTag(0L) should be (0)
     cache.getTag(1024L) should be (128)
     cache.getTag(2048L) should be (256)
@@ -51,9 +45,9 @@ class GraphCacheSimulatorTest extends FlatSpec with Matchers  {
 
   }
 
-  "In a Cache with default parameters, index of elements 0, 1024, 2048, 4096 and 32768" should " be 0, 128, 256, 0 and 0 " in {
+  "In a Cache of 32KB with default parameters, index of elements 0, 1024, 2048, 4096 and 32768" should " be 0, 128, 256, 0 and 0 " in {
 
-    val cache = new Cache()
+    val cache = new Cache(32*1024)
     cache.getIndex(cache.getTag(0L)) should be (0)
     cache.getIndex(cache.getTag(1024L)) should be (128)
     cache.getIndex(cache.getTag(2048L)) should be (256)
@@ -62,9 +56,9 @@ class GraphCacheSimulatorTest extends FlatSpec with Matchers  {
 
   }
 
-  "In a Cache with default parameters, setIds of elements 0, 1024, 2048, 4096 and 32768" should " 0, 0, 0 and 0 " in {
+  "In a Cache of 32KB with default parameters, setIds of elements 0, 1024, 2048, 4096 and 32768" should " 0, 0, 0 and 0 " in {
 
-    val cache = new Cache()
+    val cache = new Cache(32*1024)
     cache.getSetId(cache.getIndex(cache.getTag(0L))) should be (0)
     cache.getSetId(cache.getIndex(cache.getTag(1024L))) should be (0)
     cache.getSetId(cache.getIndex(cache.getTag(2048L))) should be (0)
